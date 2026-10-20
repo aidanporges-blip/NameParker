@@ -6,5 +6,3 @@
 
 - Aidan
 - Zander
-- Selorm
-- Omar
