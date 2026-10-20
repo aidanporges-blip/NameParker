@@ -16,6 +16,7 @@ const state = {
   modOpen: false,
   focusQueue: null, // list of student ids to practice, or null for all
   practice: null, // the current practice session (see startPractice)
+  showAllNeeds: false, // Progress screen: show every name that needs practice, not just the top three
   classUi: { syncing: false, uploaded: false },
   addClass: { picked: CANVAS_COURSES[0].id, query: "" },
 };
@@ -614,19 +615,20 @@ function progressScreen() {
   const behind = coverage < expected - 5;
   const ahead = coverage > expected + 5;
   const sure = section.roster.filter((s) => s.status === "confident").length;
-  const missed = section.roster
-    .filter((s) => s.missedCount > 0)
-    .sort((a, b) => b.missedCount - a.missedCount)
-    .slice(0, 3);
+  // Everyone not yet sure: most-missed first, then shaky, then new.
+  const needs = section.roster
+    .filter((s) => s.status !== "confident")
+    .sort((a, b) => b.missedCount - a.missedCount || (a.status === "learning" ? -1 : 0) - (b.status === "learning" ? -1 : 0));
+  const shown = state.showAllNeeds ? needs : needs.slice(0, 3);
   const board = [...LEADERBOARD_OTHERS, { name: "You", pct: coverage, isYou: true }].sort((a, b) => b.pct - a.pct);
 
-  const missedRows = missed.length === 0
-    ? '<p class="empty">No repeated misses yet.</p>'
-    : missed
+  const needsRows = shown.length === 0
+    ? '<p class="empty">Everyone is sure. Nice work.</p>'
+    : shown
         .map(
           (s) => `<div class="list-row">${avatar(s, 44)}
             <div class="grow"><p class="row-title">${esc(s.fullName)}</p>${s.pronunciation ? `<p class="pron ellipsis">“${esc(s.pronunciation)}”</p>` : ""}</div>
-            ${pill("missed", null, `Missed ${s.missedCount}&times;`)}
+            ${s.missedCount > 0 ? pill("missed", null, `Missed ${s.missedCount}&times;`) : statusPill(s)}
           </div>`
         )
         .join("");
@@ -654,10 +656,13 @@ function progressScreen() {
         <p class="split-note">${coverage}% of your roster</p>
       </div>
     </div>
-    <div class="section-head"><h2 class="h2">Names you often miss</h2></div>
-    <div class="card list">${missedRows}</div>
-    ${missed.length > 0
-      ? `<button class="btn btn-primary mt" data-action="practiceMissed" data-arg="${missed.map((s) => s.id).join(",")}">Practice these names ${icon("arrow", 18)}</button>`
+    <div class="section-head"><h2 class="h2">Names that need practice</h2><span class="meta">${needs.length} of ${section.roster.length}</span></div>
+    <div class="card list">${needsRows}</div>
+    ${needs.length > 3
+      ? `<button class="link" data-action="toggleNeeds">${state.showAllNeeds ? "Show fewer" : `Show all ${needs.length}`}</button>`
+      : ""}
+    ${shown.length > 0
+      ? `<button class="btn btn-primary mt" data-action="practiceMissed" data-arg="${shown.map((s) => s.id).join(",")}">Practice these names ${icon("arrow", 18)}</button>`
       : ""}
     <div class="section-head"><h2 class="h2">How you compare</h2></div>
     <div class="card rank-list">${board
@@ -750,6 +755,7 @@ function go(tab) {
   if (tab === "class") state.classUi = { syncing: false, uploaded: false };
   if (tab === "addClass") state.addClass = { picked: CANVAS_COURSES[0].id, query: "" };
   if (tab === "practice") startPractice(state.duration);
+  if (tab !== state.tab) state.showAllNeeds = false;
   state.tab = tab;
   render();
 }
@@ -829,6 +835,10 @@ const ACTIONS = {
   practiceMissed: (ids) => {
     state.focusQueue = ids.split(",");
     go("practice");
+  },
+  toggleNeeds: () => {
+    state.showAllNeeds = !state.showAllNeeds;
+    render();
   },
   pickCourse: (id) => {
     state.addClass.picked = id;
