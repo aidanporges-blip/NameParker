@@ -40,6 +40,7 @@ function testStudents() {
   ];
 }
 
+// One test class for now. Add more sections here later if we need them.
 function initialSections() {
   return {
     E: {
@@ -57,42 +58,6 @@ function initialSections() {
         makeStudent("Fatima", "Al-Sayed", "fah-TEE-mah al-sy-YED", "FAT-ih-muh AL-say-ed"),
         makeStudent("Grace", "Kim"),
       ],
-    },
-    D: {
-      label: "Section D: Research Seminar",
-      canvasSynced: true,
-      lastSync: "1d ago",
-      roster: [
-        makeStudent("Noah", "Patel"),
-        makeStudent("Lucia", "Moreno"),
-        makeStudent("Theo", "Anders"),
-        makeStudent("Ivy", "Okafor"),
-        makeStudent("Sam", "Whitfield"),
-        makeStudent("Ana", "Petrova"),
-      ],
-    },
-    C: {
-      label: "Section C: World History Survey",
-      canvasSynced: true,
-      lastSync: "3h ago",
-      roster: [
-        makeStudent("Leo", "Nakamura"),
-        makeStudent("Rosa", "Delgado"),
-        makeStudent("Kwame", "Boateng"),
-        makeStudent("Hana", "Suzuki"),
-        makeStudent("Owen", "Fitzgerald"),
-        makeStudent("Nadia", "Hussain"),
-        makeStudent("Cole", "Bennett"),
-        makeStudent("Yuki", "Tanaka"),
-        makeStudent("Femi", "Adeyemi"),
-        makeStudent("Willa", "Stone"),
-      ],
-    },
-    T: {
-      label: "Section T: Testing Roster (4 students)",
-      canvasSynced: true,
-      lastSync: "just now",
-      roster: testStudents(),
     },
   };
 }
