@@ -1,2 +1,10 @@
 # NameParker
-Guess hoo / Name Parker: helps professors learn student names with a quick pre-class drill. Team NameParker:
+
+**Guess hoo?** is a mobile name-learning coach that helps college instructors learn every student's name. It turns class rosters into short, targeted pre-class drills (like a 4-minute cram before Section T) that resurface missed names and show which ones are still shaky.
+
+## Team NameParker
+
+- Aidan
+- Zander
+- Selorm
+- Omar
