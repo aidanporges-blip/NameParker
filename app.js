@@ -1,5 +1,5 @@
 /* Guess Hoo? (Name Parker) app logic: the "controller" and "view" in MVC terms.
-   Plain JavaScript, no frameworks. Data lives in data.js. */
+   Plain JavaScript, no frameworks. Data lives in data.js; saving lives in storage.js. */
 
 const TOTAL_WEEKS = 15;
 
@@ -19,6 +19,13 @@ const state = {
   classUi: { syncing: false, uploaded: false },
   addClass: { picked: CANVAS_COURSES[0].id, query: "" },
 };
+
+// Pick up where the professor left off, if this browser has saved progress.
+const savedProgress = loadProgress();
+if (savedProgress) {
+  Object.assign(state, savedProgress);
+  if (!state.sections[state.activeKey]) state.activeKey = Object.keys(state.sections)[0];
+}
 
 let timerId = null;
 
@@ -731,6 +738,9 @@ function render() {
 
   document.querySelector(".scroll").scrollTop = keepScroll;
   lastRenderedTab = state.tab;
+
+  // Every change on screen goes through render(), so saving here keeps progress current.
+  saveProgress(state);
 }
 
 /* ---------------- Navigation and actions ---------------- */
@@ -746,6 +756,7 @@ function go(tab) {
 
 function resetAll() {
   stopTimer();
+  clearProgress();
   Object.assign(state, {
     sections: seedProgress(initialSections()),
     activeKey: "E",
@@ -773,6 +784,7 @@ const ACTIONS = {
       activeSection().lastSync = "just now";
       state.classUi.syncing = false;
       if (state.tab === "class") render();
+      else saveProgress(state);
     }, 900);
   },
   upload: () => {

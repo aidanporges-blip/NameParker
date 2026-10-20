@@ -4,3 +4,4 @@
    - Use only fake student data. Never real names or photos.
    - Show me a plan before writing code.
    - Keep each change small and tell me which files you changed.
+   - All saving and loading goes through storage.js. Don't use localStorage anywhere else.
