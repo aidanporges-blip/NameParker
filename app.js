@@ -674,13 +674,24 @@ function progressScreen() {
       .join("")}</div>`;
 }
 
+// A Canvas course counts as added once one of the sections came from it.
+function isCourseAdded(id) {
+  return Object.values(state.sections).some((s) => s.courseId === id);
+}
+
+function firstOpenCourse() {
+  const course = CANVAS_COURSES.find((c) => !isCourseAdded(c.id));
+  return course ? course.id : null;
+}
+
 function courseList() {
   const { picked, query } = state.addClass;
   return CANVAS_COURSES.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()))
     .map((c) => {
-      const on = picked === c.id;
-      return `<button class="course${on ? " on" : ""}" data-action="pickCourse" data-arg="${c.id}" aria-pressed="${on}">
-        <span class="grow"><span class="row-title">${esc(c.name)}</span><span class="row-sub">${c.size} students</span></span>
+      const added = isCourseAdded(c.id);
+      const on = !added && picked === c.id;
+      return `<button class="course${on ? " on" : ""}" data-action="pickCourse" data-arg="${c.id}" aria-pressed="${on}"${added ? ' disabled style="opacity:.55"' : ""}>
+        <span class="grow"><span class="row-title">${esc(c.name)}</span><span class="row-sub">${added ? "Already added" : `${c.size} students`}</span></span>
         <span class="radio">${on ? icon("check", 14, 3) : ""}</span>
       </button>`;
     })
@@ -699,7 +710,9 @@ function addClassScreen() {
     </label>
     <div id="course-list">${courseList()}</div>
     <p class="link" style="margin:6px 0 18px">Canvas not working? Upload a roster file instead</p>
-    <button class="btn btn-primary" data-action="importCourse">Import course ${icon("arrow", 18)}</button>`;
+    ${firstOpenCourse()
+      ? `<button class="btn btn-primary" data-action="importCourse">Import course ${icon("arrow", 18)}</button>`
+      : '<p class="empty" style="text-align:center">All your Canvas courses are already added.</p>'}`;
 }
 
 function moderatorPanel() {
@@ -753,7 +766,7 @@ function render() {
 function go(tab) {
   if (state.tab === "practice" && tab !== "practice") stopTimer();
   if (tab === "class") state.classUi = { syncing: false, uploaded: false };
-  if (tab === "addClass") state.addClass = { picked: CANVAS_COURSES[0].id, query: "" };
+  if (tab === "addClass") state.addClass = { picked: firstOpenCourse(), query: "" };
   if (tab === "practice") startPractice(state.duration);
   if (tab !== state.tab) state.showAllNeeds = false;
   state.tab = tab;
@@ -846,15 +859,16 @@ const ACTIONS = {
   },
   importCourse: () => {
     const course = CANVAS_COURSES.find((c) => c.id === state.addClass.picked);
-    if (!course) return;
+    if (!course || isCourseAdded(course.id)) return;
     const used = Object.keys(state.sections);
     const letter = "FGHIJKLMNOPQRSTUVWXYZ".split("").find((l) => !used.includes(l)) || "X";
     const name = course.name.split(":")[1] ? course.name.split(":")[1].trim() : course.name;
     state.sections[letter] = {
       label: `Section ${letter}: ${name}`,
+      courseId: course.id,
       canvasSynced: true,
       lastSync: "just now",
-      roster: shuffle(NAME_POOL).slice(0, 8).map(([f, l]) => makeStudent(f, l)),
+      roster: canvasRoster(course),
     };
     state.activeKey = letter;
     go("class");

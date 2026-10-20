@@ -1,18 +1,19 @@
 /* Guess Hoo? (Name Parker) data: the "model" in MVC terms.
    FAKE STUDENTS ONLY. Never put real student names or photos in this file. */
 
-// Names used when a new class is "imported" from Canvas.
-const NAME_POOL = [
-  ["Jordan", "Smith"],
-  ["Maya", "Chen"],
-  ["Devon", "Brooks"],
-  ["Elena", "Vasquez"],
-  ["Marcus", "Reed"],
-  ["Fatima", "Al-Sayed"],
-  ["Grace", "Kim"],
-  ["Noah", "Patel"],
-  ["Lucia", "Moreno"],
-  ["Theo", "Anders"],
+// Made-up names used to build the rosters of classes "imported" from Canvas.
+// 40 first names and 40 last names, so even a big class has no repeats.
+const FIRST_NAMES = [
+  "Aaron", "Bianca", "Caleb", "Dalia", "Ethan", "Farah", "Gabriel", "Hannah", "Isaac", "Jasmine",
+  "Kenji", "Layla", "Mateo", "Nora", "Oscar", "Paloma", "Quentin", "Rhea", "Silas", "Tara",
+  "Umar", "Valeria", "Wesley", "Ximena", "Yusuf", "Zoe", "Adrian", "Beatriz", "Corey", "Daphne",
+  "Emeka", "Freya", "Hugo", "Imani", "Jonah", "Keira", "Luca", "Mira", "Nikhil", "Olivia",
+];
+const LAST_NAMES = [
+  "Abara", "Bianchi", "Castillo", "Dawson", "Eriksen", "Ferreira", "Garner", "Haddad", "Ibarra", "Jansen",
+  "Kowalski", "Lindqvist", "Mwangi", "Novak", "Osei", "Park", "Quinn", "Rossi", "Sato", "Torres",
+  "Ueda", "Varga", "Walsh", "Xu", "Yilmaz", "Zhang", "Asante", "Brennan", "Cruz", "Dubois",
+  "Ellis", "Fonseca", "Gupta", "Holloway", "Iyer", "Jovanovic", "Kaur", "Laurent", "Moyo", "Nguyen",
 ];
 
 // One student record. Status moves new -> learning -> confident.
@@ -93,11 +94,24 @@ function seedProgress(sections) {
 }
 
 // Fake Canvas courses for the "Add a class" screen.
+// "offset" picks where each course starts in the name lists, so each course has its own students.
 const CANVAS_COURSES = [
-  { id: "hist210", name: "HIST 210: Modern Europe", size: 45 },
-  { id: "hist301", name: "HIST 301: Research Seminar", size: 12 },
-  { id: "hist150", name: "HIST 150: World History Survey", size: 110 },
+  { id: "hist210", name: "HIST 210: Modern Europe", size: 15, offset: 0 },
+  { id: "hist301", name: "HIST 301: Research Seminar", size: 12, offset: 15 },
+  { id: "hist150", name: "HIST 150: World History Survey", size: 20, offset: 27 },
 ];
+
+// The roster a course brings in when imported. Always the same students for the same course.
+// Classes are smaller than the 40 first names, so no one in a class shares a first name.
+function canvasRoster(course) {
+  const roster = [];
+  for (let i = 0; i < course.size; i++) {
+    const first = FIRST_NAMES[(course.offset + i) % FIRST_NAMES.length];
+    const last = LAST_NAMES[(course.offset + i * 7) % LAST_NAMES.length];
+    roster.push(makeStudent(first, last));
+  }
+  return roster;
+}
 
 // Fake classmates for the "How you compare" leaderboard.
 const LEADERBOARD_OTHERS = [
