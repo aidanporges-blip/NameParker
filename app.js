@@ -476,9 +476,9 @@ function practiceScreen() {
   const answeredCorrectly = answered && p.question.options[p.picked].isCorrect;
   const acingEasy = state.mode === "easy" && p.score.total >= 3 && p.score.correct / p.score.total >= 0.9;
 
-  let html = `${header(true)}
-    <div class="card session-card">
-      <p class="eyebrow">${state.mode === "easy" ? "Easy mode" : "Hard mode"} &middot; Section ${state.activeKey}</p>
+  // No logo or tab bar here: both lead out of practice, so "End practice" is the only way out.
+  let html = `<div class="card session-card">
+      <p class="eyebrow">${state.mode === "easy" ? "Easy mode" : "Hard mode"} &middot; Section ${state.activeKey}${state.focusQueue && state.focusQueue.length > 0 ? " &middot; Missed only" : ""}</p>
       <p class="session-title">${esc(sectionDescription(section.label))}</p>`;
   if (!p.ended) {
     html += `<div class="session-stats">
@@ -493,10 +493,6 @@ function practiceScreen() {
     }
   }
   html += `</div>`;
-
-  if (state.focusQueue && state.focusQueue.length > 0) {
-    html += `<div class="glance">${icon("tilde", 16, 2.6)} Practicing missed names only</div>`;
-  }
 
   if (p.ended) {
     html += recapView(section, p, acingEasy);
@@ -524,10 +520,7 @@ function practiceScreen() {
       html += `<div class="feedback ${answeredCorrectly ? "good" : "bad"}" role="status">
           <span class="fb-ico">${icon(answeredCorrectly ? "check" : "x", 18, 2.8)}</span>
           <div>
-            <p class="fb-title">${answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : "Missed this time."}</p>
-            <p class="fb-body">${answeredCorrectly
-              ? `${esc(q.fullName)} got a step closer to sure.`
-              : `That's ${esc(q.fullName)}. They'll come back around in practice.`}</p>
+            <p class="fb-title">${answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : `Missed. That's ${esc(q.fullName)}.`}</p>
           </div>
         </div>`;
     }
@@ -537,12 +530,15 @@ function practiceScreen() {
           <span class="grow">
             <span class="hear-label">Hear how to say it</span>
             <span class="hear-phon">${esc(correctPhonetic(q))}</span>
-            <span class="row-sub">Tap to hear ${esc(q.fullName)}</span>
           </span>
         </button>`;
     }
     if (answered) {
-      html += `<button class="btn btn-primary" data-action="next" style="margin-bottom:10px">Next name ${icon("arrow", 18)}</button>`;
+      // Side by side after answering, so the whole question fits on one screen.
+      return `${html}<div class="btn-row">
+          <button class="btn btn-secondary" data-action="go" data-arg="class">End practice</button>
+          <button class="btn btn-primary" data-action="next">Next name ${icon("arrow", 18)}</button>
+        </div>`;
     }
   }
 
@@ -748,10 +744,11 @@ function render() {
   document.getElementById("root").innerHTML = `<div class="phone"><div class="screen">
       <div class="statusbar"><span>9:41</span>${statusBarIcons()}</div>
       <div class="scroll">${SCREENS[state.tab]()}</div>
-      ${state.tab !== "addClass" ? tabBar() : ""}
+      ${state.tab !== "addClass" && state.tab !== "practice" ? tabBar() : ""}
       <div class="home-ind"></div>
     </div></div>`;
-  document.getElementById("mod-root").innerHTML = moderatorPanel();
+  // Hidden during practice: without the tab bar the floating button would cover the answers.
+  document.getElementById("mod-root").innerHTML = state.tab === "practice" ? "" : moderatorPanel();
 
   document.querySelector(".scroll").scrollTop = keepScroll;
   lastRenderedTab = state.tab;
