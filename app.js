@@ -378,7 +378,6 @@ function homeScreen() {
     <section class="hero">
       <div class="hero-copy">
         <h2 class="display">Pick a class to practice.</h2>
-        <p class="lede">Five focused minutes to turn shaky names into sure ones.</p>
       </div>
       ${rotunda()}
     </section>
