@@ -112,10 +112,3 @@ function canvasRoster(course) {
   }
   return roster;
 }
-
-// Fake classmates for the "How you compare" leaderboard.
-const LEADERBOARD_OTHERS = [
-  { name: "R. Alvarez", pct: 78 },
-  { name: "J. Okafor", pct: 61 },
-  { name: "M. Chen", pct: 39 },
-];

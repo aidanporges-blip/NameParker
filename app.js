@@ -615,7 +615,6 @@ function progressScreen() {
     .filter((s) => s.status !== "confident")
     .sort((a, b) => b.missedCount - a.missedCount || (a.status === "learning" ? -1 : 0) - (b.status === "learning" ? -1 : 0));
   const shown = state.showAllNeeds ? needs : needs.slice(0, 3);
-  const board = [...LEADERBOARD_OTHERS, { name: "You", pct: coverage, isYou: true }].sort((a, b) => b.pct - a.pct);
 
   const needsRows = shown.length === 0
     ? '<p class="empty">Everyone is sure. Nice work.</p>'
@@ -658,15 +657,7 @@ function progressScreen() {
       : ""}
     ${shown.length > 0
       ? `<button class="btn btn-primary mt" data-action="practiceMissed" data-arg="${shown.map((s) => s.id).join(",")}">Practice these names ${icon("arrow", 18)}</button>`
-      : ""}
-    <div class="section-head"><h2 class="h2">How you compare</h2></div>
-    <div class="card rank-list">${board
-      .map(
-        (row, i) => `<div class="rank-row${row.isYou ? " you" : ""}">
-          <span class="rank">${i + 1}</span><span class="grow">${esc(row.name)}</span><span class="rank-pct">${row.pct}%</span>
-        </div>`
-      )
-      .join("")}</div>`;
+      : ""}`;
 }
 
 // A Canvas course counts as added once one of the sections came from it.
@@ -743,7 +734,7 @@ function render() {
 
   document.getElementById("root").innerHTML = `<div class="phone"><div class="screen">
       <div class="statusbar"><span>9:41</span>${statusBarIcons()}</div>
-      <div class="scroll">${SCREENS[state.tab]()}</div>
+      <div class="scroll${state.tab !== "practice" ? " with-mod" : ""}">${SCREENS[state.tab]()}</div>
       ${state.tab !== "addClass" && state.tab !== "practice" ? tabBar() : ""}
       <div class="home-ind"></div>
     </div></div>`;

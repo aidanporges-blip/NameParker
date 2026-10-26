@@ -210,12 +210,6 @@ p,h1,h2,h3{margin:0}
 .pace.behind{background:var(--red-soft);color:var(--red-deep)}
 .pace.ahead{background:var(--green-soft);color:var(--green)}
 .pace.even{background:var(--navy-soft);color:var(--navy)}
-.rank-list{padding:8px}
-.rank-row{display:flex;align-items:center;gap:12px;padding:10px;font-size:15px;border-radius:12px}
-.rank{width:26px;height:26px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted);flex-shrink:0}
-.rank-pct{font-weight:700}
-.rank-row.you{background:var(--navy);color:#fff;font-weight:700}
-.rank-row.you .rank{background:rgba(255,255,255,.18);color:#fff}
 
 /* Add class */
 .search{display:flex;align-items:center;gap:10px;background:#E9EDF3;border-radius:14px;padding:12px 14px;color:var(--faint);margin-bottom:14px}
@@ -232,5 +226,9 @@ p,h1,h2,h3{margin:0}
 .mod-body{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:6px;box-shadow:var(--shadow);font-size:13px;color:var(--muted)}
 .mod-body input[type=range]{width:100%;accent-color:var(--orange);margin:8px 0 10px}
 .mod-reset{width:100%;padding:9px;border-radius:10px;border:1.5px solid #CDD3DF;font-weight:700;color:var(--navy);font-size:13px;text-align:center}
-@media (max-width:440px){ .mod{bottom:calc(86px + env(safe-area-inset-bottom,0px));right:8px;width:180px} }
+@media (max-width:440px){
+  .mod{bottom:calc(86px + env(safe-area-inset-bottom,0px));right:8px;width:180px}
+  /* Room to scroll the last button out from under the floating moderator button. */
+  .scroll.with-mod{padding-bottom:64px}
+}
 @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
