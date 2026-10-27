@@ -264,10 +264,15 @@ function practicePool() {
   return roster;
 }
 
+// The next question: who to ask, then the answers to choose from.
+function pickQuestion() {
+  const student = chooseStudent();
+  return { student, options: buildOptions(student) };
+}
+
 // Pick the next student: a missed student who is due again first, otherwise a random
 // name that isn't "confident" yet (skipping anyone already waiting to be re-asked).
-function pickQuestion() {
-  const roster = activeSection().roster;
+function chooseStudent() {
   const pool = practicePool();
   const p = state.practice;
   const n = p.asked + 1; // the question number being picked
@@ -289,6 +294,13 @@ function pickQuestion() {
   p.reask = p.reask.filter((r) => r.id !== student.id);
   p.asked = n;
   console.log("[pick]", student.fullName, "from", from.length, from.length === 1 ? "candidate" : "candidates");
+  return student;
+}
+
+// The answer buttons: Easy Mode shows the name among 3 others from the class,
+// Hard Mode shows the right pronunciation and a mistaken one.
+function buildOptions(student) {
+  const roster = activeSection().roster;
   let options;
   if (state.mode === "easy") {
     const distractors = shuffle(roster.filter((s) => s.id !== student.id)).slice(0, 3);
@@ -299,7 +311,7 @@ function pickQuestion() {
       { text: mistakePhonetic(student), isCorrect: false },
     ]);
   }
-  return { student, options };
+  return options;
 }
 
 function snapshotStatuses() {
