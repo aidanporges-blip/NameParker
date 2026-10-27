@@ -379,6 +379,7 @@ function answer(index) {
     p.reask.push({ id: s.id, due: p.asked + 2 });
   }
   console.log("[answer]", s.fullName, correct ? "RIGHT" : "MISS", "status:", s.status, "misses:", s.missedCount);
+  saveProgress(state);
   render();
 }
 
@@ -779,9 +780,6 @@ function render() {
 
   document.querySelector(".scroll").scrollTop = keepScroll;
   lastRenderedTab = state.tab;
-
-  // Every change on screen goes through render(), so saving here keeps progress current.
-  saveProgress(state);
 }
 
 /* ---------------- Navigation and actions ---------------- */
@@ -809,6 +807,7 @@ function resetAll() {
     focusQueue: null,
     practice: null,
   });
+  saveProgress(state);
   go("home");
 }
 
@@ -816,6 +815,7 @@ const ACTIONS = {
   go: (arg) => go(arg),
   pickSection: (key) => {
     state.activeKey = key;
+    saveProgress(state);
     go("class");
   },
   speak: (name) => speak(name),
@@ -825,8 +825,8 @@ const ACTIONS = {
     setTimeout(() => {
       activeSection().lastSync = "just now";
       state.classUi.syncing = false;
+      saveProgress(state);
       if (state.tab === "class") render();
-      else saveProgress(state);
     }, 900);
   },
   upload: () => {
@@ -835,14 +835,17 @@ const ACTIONS = {
   },
   setFilter: (v) => {
     state.namesFilter = v;
+    saveProgress(state);
     render();
   },
   setMode: (v) => {
     state.mode = v;
+    saveProgress(state);
     render();
   },
   setDuration: (v) => {
     state.duration = v === "none" ? null : Number(v);
+    saveProgress(state);
     render();
   },
   launch: () => {
@@ -858,6 +861,7 @@ const ACTIONS = {
   next: () => nextQuestion(),
   tryHard: () => {
     state.mode = "hard";
+    saveProgress(state);
     go("sectionMenu");
   },
   goAgain: () => {
@@ -894,6 +898,7 @@ const ACTIONS = {
       roster: canvasRoster(course),
     };
     state.activeKey = letter;
+    saveProgress(state);
     go("class");
   },
   toggleMod: () => {
@@ -924,6 +929,7 @@ document.addEventListener("input", (e) => {
 
 document.addEventListener("change", (e) => {
   if (e.target.id === "week-slider") {
+    saveProgress(state);
     render();
     const slider = document.getElementById("week-slider");
     if (slider) slider.focus();
