@@ -67,7 +67,7 @@ function mistakePhonetic(student) {
 
 function coverageOf(section) {
   if (!section || section.roster.length === 0) return 0;
-  const confident = section.roster.filter((s) => s.status === "confident").length;
+  const confident = section.roster.filter((s) => !needsPractice(s)).length;
   return Math.round((confident / section.roster.length) * 100);
 }
 
@@ -150,6 +150,16 @@ const STATUS = {
 
 function statusOf(student) {
   return STATUS[student.status] || STATUS.new;
+}
+
+// The two practice rules. A student needs practice until they're "confident" (Sure).
+// "Was missed" is a different rule: missed at least once, even if they're Sure now.
+function needsPractice(student) {
+  return student.status !== "confident";
+}
+
+function wasMissed(student) {
+  return student.missedCount > 0;
 }
 
 function pill(cls, iconName, text) {
@@ -270,7 +280,7 @@ function pickQuestion() {
     from = [byId(due.id)];
   } else {
     const waiting = p.reask.map((r) => r.id);
-    const needing = pool.filter((s) => s.status !== "confident" && !waiting.includes(s.id));
+    const needing = pool.filter((s) => needsPractice(s) && !waiting.includes(s.id));
     if (needing.length > 0) from = needing;
     else if (p.reask.length > 0) from = [byId(p.reask[0].id)]; // nobody else left: re-ask now
     else from = pool;
@@ -461,7 +471,7 @@ function classScreen() {
 function sectionMenuScreen() {
   const section = activeSection();
   const coverage = coverageOf(section);
-  const missedCount = section.roster.filter((s) => s.missedCount > 0).length;
+  const missedCount = section.roster.filter(wasMissed).length;
   const opt = (on, action, arg, label) =>
     `<button class="opt${on ? " on" : ""}" data-action="${action}" data-arg="${arg}" aria-pressed="${on}">${label}</button>`;
   const timers = [null, 1, 5, 10]
@@ -583,7 +593,7 @@ function recapView(section, p, acingEasy) {
   const newlyConfident = p.startStatuses
     ? section.roster.filter((s) => p.startStatuses[s.id] !== "confident" && s.status === "confident").length
     : 0;
-  const stillShaky = section.roster.filter((s) => s.status !== "confident").sort((a, b) => b.missedCount - a.missedCount);
+  const stillShaky = section.roster.filter(needsPractice).sort((a, b) => b.missedCount - a.missedCount);
 
   let html = `<section class="hero">
       <div class="hero-copy">
@@ -635,10 +645,10 @@ function progressScreen() {
   const expected = Math.round((state.week / TOTAL_WEEKS) * 100);
   const behind = coverage < expected - 5;
   const ahead = coverage > expected + 5;
-  const sure = section.roster.filter((s) => s.status === "confident").length;
+  const sure = section.roster.filter((s) => !needsPractice(s)).length;
   // Everyone not yet sure: most-missed first, then shaky, then new.
   const needs = section.roster
-    .filter((s) => s.status !== "confident")
+    .filter(needsPractice)
     .sort((a, b) => b.missedCount - a.missedCount || (a.status === "learning" ? -1 : 0) - (b.status === "learning" ? -1 : 0));
   const shown = state.showAllNeeds ? needs : needs.slice(0, 3);
 
@@ -648,7 +658,7 @@ function progressScreen() {
         .map(
           (s) => `<div class="list-row">${avatar(s, 44)}
             <div class="grow"><p class="row-title">${esc(s.fullName)}</p>${s.pronunciation ? `<p class="pron ellipsis">“${esc(s.pronunciation)}”</p>` : ""}</div>
-            ${s.missedCount > 0 ? pill("missed", null, `Missed ${s.missedCount}&times;`) : statusPill(s)}
+            ${wasMissed(s) ? pill("missed", null, `Missed ${s.missedCount}&times;`) : statusPill(s)}
           </div>`
         )
         .join("");
@@ -837,7 +847,7 @@ const ACTIONS = {
   },
   launch: () => {
     if (state.namesFilter === "missed") {
-      const ids = activeSection().roster.filter((s) => s.missedCount > 0).map((s) => s.id);
+      const ids = activeSection().roster.filter(wasMissed).map((s) => s.id);
       state.focusQueue = ids.length > 0 ? ids : null;
     } else {
       state.focusQueue = null;
