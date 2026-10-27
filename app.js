@@ -254,13 +254,31 @@ function practicePool() {
   return roster;
 }
 
-// Pick the next student, favoring names that aren't "confident" yet.
+// Pick the next student: a missed student who is due again first, otherwise a random
+// name that isn't "confident" yet (skipping anyone already waiting to be re-asked).
 function pickQuestion() {
   const roster = activeSection().roster;
   const pool = practicePool();
-  const needing = pool.filter((s) => s.status !== "confident");
-  const from = needing.length > 0 ? needing : pool;
+  const p = state.practice;
+  const n = p.asked + 1; // the question number being picked
+  const byId = (id) => pool.find((s) => s.id === id);
+  p.reask = p.reask.filter((r) => byId(r.id)); // drop anyone no longer in the pool
+
+  let from;
+  const due = p.reask.find((r) => r.due <= n);
+  if (due) {
+    from = [byId(due.id)];
+  } else {
+    const waiting = p.reask.map((r) => r.id);
+    const needing = pool.filter((s) => s.status !== "confident" && !waiting.includes(s.id));
+    if (needing.length > 0) from = needing;
+    else if (p.reask.length > 0) from = [byId(p.reask[0].id)]; // nobody else left: re-ask now
+    else from = pool;
+  }
   const student = from[Math.floor(Math.random() * from.length)];
+  p.reask = p.reask.filter((r) => r.id !== student.id);
+  p.asked = n;
+  console.log("[pick]", student.fullName, "from", from.length, from.length === 1 ? "candidate" : "candidates");
   let options;
   if (state.mode === "easy") {
     const distractors = shuffle(roster.filter((s) => s.id !== student.id)).slice(0, 3);
@@ -284,8 +302,11 @@ function snapshotStatuses() {
 
 function startPractice(minutes) {
   stopTimer();
+  // Build the session first, so pickQuestion() reads this round's re-ask list, not the last round's.
   state.practice = {
-    question: pickQuestion(),
+    question: null,
+    asked: 0, // questions shown so far this round
+    reask: [], // missed students to ask again soon: { id, due } where due is a question number
     picked: null, // index of the option the user tapped
     score: { correct: 0, total: 0 },
     duration: minutes,
@@ -293,6 +314,7 @@ function startPractice(minutes) {
     ended: false,
     startStatuses: minutes ? snapshotStatuses() : null,
   };
+  state.practice.question = pickQuestion();
   if (minutes) startTimer();
 }
 
@@ -342,7 +364,11 @@ function answer(index) {
   } else {
     s.missedCount += 1;
     s.status = "learning";
+    // Story 4: ask a missed student again within the next two questions.
+    p.reask = p.reask.filter((r) => r.id !== s.id);
+    p.reask.push({ id: s.id, due: p.asked + 2 });
   }
+  console.log("[answer]", s.fullName, correct ? "RIGHT" : "MISS", "status:", s.status, "misses:", s.missedCount);
   render();
 }
 
