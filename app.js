@@ -381,6 +381,7 @@ function answer(index) {
   p.score.correct += correct ? 1 : 0;
   p.score.total += 1;
   const s = p.question.student;
+  const wasComplete = coverageOf(activeSection()) === 100;
   if (correct) {
     s.status = s.status === "new" ? "learning" : "confident";
   } else {
@@ -390,6 +391,8 @@ function answer(index) {
     p.reask = p.reask.filter((r) => r.id !== s.id);
     p.reask.push({ id: s.id, due: p.asked + 2 });
   }
+  // This answer made every student in the class Sure.
+  p.justCompleted = !wasComplete && coverageOf(activeSection()) === 100;
   console.log("[answer]", s.fullName, correct ? "RIGHT" : "MISS", "status:", s.status, "misses:", s.missedCount);
   saveProgress(state);
   render();
@@ -398,6 +401,7 @@ function answer(index) {
 function nextQuestion() {
   const p = state.practice;
   p.picked = null;
+  p.justCompleted = false;
   p.question = pickQuestion();
   render();
 }
@@ -569,7 +573,9 @@ function practiceScreen() {
       html += `<div class="feedback ${answeredCorrectly ? "good" : "bad"}" role="status">
           <span class="fb-ico">${icon(answeredCorrectly ? "check" : "x", 18, 2.8)}</span>
           <div>
-            <p class="fb-title">${answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : `Missed. That's ${esc(q.fullName)}.`}</p>
+            <p class="fb-title">${p.justCompleted
+              ? `Class complete! All ${section.roster.length} are Sure.`
+              : answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : `Missed. That's ${esc(q.fullName)}.`}</p>
           </div>
         </div>`;
     }
@@ -586,7 +592,7 @@ function practiceScreen() {
       // Side by side after answering, so the whole question fits on one screen.
       return `${html}<div class="btn-row">
           <button class="btn btn-secondary" data-action="go" data-arg="class">End practice</button>
-          <button class="btn btn-primary" data-action="next">Next name ${icon("arrow", 18)}</button>
+          <button class="btn btn-primary" data-action="next">${p.justCompleted ? "Keep going" : "Next name"} ${icon("arrow", 18)}</button>
         </div>`;
     }
   }
@@ -682,10 +688,12 @@ function progressScreen() {
       <p class="eyebrow">Progress &middot; Section ${state.activeKey}</p>
       <h1 class="title">${esc(sectionDescription(section.label))}</h1>
     </div>
-    <div class="pace ${behind ? "behind" : ahead ? "ahead" : "even"}">
+    ${coverage === 100
+      ? `<div class="pace ahead">${icon("check", 18, 2.4)} Class complete. You know all ${section.roster.length} names.</div>`
+      : `<div class="pace ${behind ? "behind" : ahead ? "ahead" : "even"}">
       ${icon(behind ? "warning" : ahead ? "check" : "tilde", 18, 2.4)}
       ${behind ? "Behind pace." : ahead ? "Ahead of pace." : "On pace."}
-    </div>
+    </div>`}
     <div class="card stat-split">
       <div class="split-cell">
         <p class="split-cap">Week</p>
