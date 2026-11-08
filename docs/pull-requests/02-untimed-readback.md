@@ -13,10 +13,12 @@ Before this change, the session recap only appeared when a timed round's clock r
 - And he sees which names are still not Sure
 - And he can go back to the roster from the readback
 
-**2. A name he missed this round (goes wrong)**
-- Given Pascal missed Lucia Moreno during this practice and has not gotten her right since
+**2. A name he has missed (goes wrong)**
+- Given Pascal has missed Lucia Moreno and has not gotten her right since
 - When he ends practice
-- Then Lucia is listed under "Still worth a glance", ahead of names he has not missed
+- Then Lucia is listed under "Still worth a glance", ahead of names he has never missed
+
+_(Reworded after review: the list is ordered by misses across all sessions, the same as Progress, not just this round. See "Changes after review".)_
 
 **3. Ending before answering anything (goes wrong)**
 - Given Pascal starts untimed practice and answers no names
@@ -32,7 +34,7 @@ Before this change, the session recap only appeared when a timed round's clock r
 
 ## What changed
 
-Tapping End practice in an untimed round with at least one answer now shows the session recap: "Practice done.", the section, the score, how many names became Sure, and the names still worth a glance. The recap has Keep practicing and Back to roster buttons (timed recaps keep Go again and Untimed practice, plus Back to roster). Ending with no answers, or ending a timed round early, behaves as before. Only `app.js` changed; nothing new is saved.
+Tapping End practice in an untimed round with at least one answer now shows the session recap: "Practice done.", the section, the score, how many names became Sure, and the names still worth a glance. The recap has Keep going and Back to roster buttons (timed recaps keep Go again and Untimed practice, plus Back to roster). Ending with no answers, or ending a timed round early, behaves as before. Only `app.js` changed; nothing new is saved.
 
 ## What the AI got wrong, and how I caught it
 
@@ -57,7 +59,19 @@ All four were run by clicking through the app at phone size (375 × 812) in Sect
 |---|---|---|---|
 | <img src="02-untimed-readback/s1-s2-readback-top.png" alt="Untimed readback: Practice done, score 6/7, Lucia Moreno first" width="160"> | <img src="02-untimed-readback/s1-readback-buttons.png" alt="Readback buttons: Keep practicing and Back to roster" width="160"> | <img src="02-untimed-readback/s3-no-answers-roster.png" alt="Ending with no answers returns to the roster" width="160"> | <img src="02-untimed-readback/s4-timed-recap.png" alt="Timed recap: 1 minute well spent, with Back to roster" width="160"> |
 
-Also checked: no errors in the browser console. Not re-checked: ending a timed round early (that path was not changed and still goes to the roster).
+Also checked: no errors in the browser console. Not re-checked: ending a timed round early (that path was not changed and still goes to the roster). The screenshots above were taken before review, so they still show the old "Section D" label and "Keep practicing"; see below for the current version.
+
+## Changes after review
+
+Aidan approved with two suggestions and a nit. All three were taken:
+
+1. **Section label wrapped at phone width (code fix).** "SESSION RECAP · SECTION D" broke onto two lines next to the illustration, and the session card above already shows "Section D · Research Seminar". The recap label is back to plain "Session recap".
+2. **Scenario 2 said "this round", but the list sorts by all-time misses (scenario fix).** The "Still worth a glance" list is ordered by misses from every session, the same rule Progress uses. Rather than change the code and make the recap disagree with Progress, Scenario 2 was reworded to "A name he has missed". The code is unchanged for this one.
+3. **Button wording (code fix).** The untimed recap's "Keep practicing" is now "Keep going", matching the class-complete message from PR #1.
+
+Re-checked at 375 × 812 after the changes: untimed practice in Section D, one right and one miss (Noah Patel), then End practice. "SESSION RECAP" fits on one line, Noah (missed) is listed first, and the only buttons are Keep going and Back to roster.
+
+<img src="02-untimed-readback/after-review-readback.png" alt="After review: Session recap on one line, Noah Patel first" width="160">
 
 ## How to check it
 
@@ -69,5 +83,5 @@ Also checked: no errors in the browser console. Not re-checked: ending a timed r
    Then open `index.html` in Chrome or Edge. For phone size, press F12 and turn on the device toolbar (375 × 812).
 2. Open **Moderator controls → Reset all progress**.
 3. **Scenario 3:** open **Research Seminar (Section D) → Practice these names**, leave the timer on **Untimed**, tap **Start practice**, then tap **End practice** right away. You should land on the roster with no recap.
-4. **Scenarios 1 and 2:** start untimed practice again. Answer a few names correctly, and when Lucia Moreno (LM) comes up, pick a wrong name. Tap **End practice** before she comes back. You should see "Session recap · Section D", "Practice done.", your score, and Lucia first under "Still worth a glance". There should be only two buttons: **Keep practicing** and **Back to roster**. Tap **Back to roster**.
+4. **Scenarios 1 and 2:** start untimed practice again. Answer a few names correctly, and when Lucia Moreno (LM) comes up, pick a wrong name. Tap **End practice** before she comes back. You should see "Session recap" (on one line), "Practice done.", your score, and Lucia first under "Still worth a glance". There should be only two buttons: **Keep going** and **Back to roster**. Tap **Back to roster**.
 5. **Scenario 4:** choose the **1 min** timer, start practice, answer one name, and wait for the timer. You should see "1 minute well spent." with **Go again**, **Untimed practice**, and **Back to roster**.

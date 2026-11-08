@@ -623,7 +623,7 @@ function recapView(section, p, acingEasy) {
 
   let html = `<section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Session recap &middot; Section ${state.activeKey}</p>
+        <p class="eyebrow">Session recap</p>
         <h2 class="display">${p.duration === null ? "Practice done." : `${p.duration} minute${p.duration === 1 ? "" : "s"} well spent.`}</h2>
         <p class="lede">${newlyConfident} ${newlyConfident === 1 ? "name" : "names"} went from shaky to sure.${stillShaky.length > 0 ? ` ${stillShaky.length} still worth a glance.` : ""}</p>
       </div>
@@ -659,7 +659,7 @@ function recapView(section, p, acingEasy) {
   }
 
   html += `<div class="stack" style="margin-bottom:10px">
-      <button class="btn btn-primary" data-action="goAgain">${p.duration === null ? "Keep practicing" : "Go again"} ${icon("arrow", 18)}</button>
+      <button class="btn btn-primary" data-action="goAgain">${p.duration === null ? "Keep going" : "Go again"} ${icon("arrow", 18)}</button>
       ${p.duration === null ? "" : '<button class="btn btn-secondary" data-action="untimed">Untimed practice</button>'}
       <button class="btn btn-secondary" data-action="go" data-arg="class">Back to roster</button>
     </div>`;
