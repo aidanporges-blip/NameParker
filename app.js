@@ -162,6 +162,12 @@ function wasMissed(student) {
   return student.missedCount > 0;
 }
 
+// Every student is Sure. Checks the students directly, because coverageOf() rounds
+// (199 of 200 would show as 100%).
+function isComplete(section) {
+  return !!section && section.roster.length > 0 && section.roster.every((s) => !needsPractice(s));
+}
+
 function pill(cls, iconName, text) {
   return `<span class="pill pill-${cls}">${iconName ? icon(iconName, 14, 2.6) : ""}${text}</span>`;
 }
@@ -381,7 +387,7 @@ function answer(index) {
   p.score.correct += correct ? 1 : 0;
   p.score.total += 1;
   const s = p.question.student;
-  const wasComplete = coverageOf(activeSection()) === 100;
+  const wasComplete = isComplete(activeSection());
   if (correct) {
     s.status = s.status === "new" ? "learning" : "confident";
   } else {
@@ -392,7 +398,7 @@ function answer(index) {
     p.reask.push({ id: s.id, due: p.asked + 2 });
   }
   // This answer made every student in the class Sure.
-  p.justCompleted = !wasComplete && coverageOf(activeSection()) === 100;
+  p.justCompleted = !wasComplete && isComplete(activeSection());
   console.log("[answer]", s.fullName, correct ? "RIGHT" : "MISS", "status:", s.status, "misses:", s.missedCount);
   saveProgress(state);
   render();
@@ -688,7 +694,7 @@ function progressScreen() {
       <p class="eyebrow">Progress &middot; Section ${state.activeKey}</p>
       <h1 class="title">${esc(sectionDescription(section.label))}</h1>
     </div>
-    ${coverage === 100
+    ${isComplete(section)
       ? `<div class="pace ahead">${icon("check", 18, 2.4)} Class complete. You know all ${section.roster.length} names.</div>`
       : `<div class="pace ${behind ? "behind" : ahead ? "ahead" : "even"}">
       ${icon(behind ? "warning" : ahead ? "check" : "tilde", 18, 2.4)}

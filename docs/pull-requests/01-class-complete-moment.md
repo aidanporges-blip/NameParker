@@ -74,6 +74,10 @@ All four were run by clicking through the app at phone size (375 × 812), starti
 
 Also checked: a right answer in a class that is already complete does not show the message again; the story 4 check (missed names return within two questions) still passes 500/500; Hard Mode with a timer still fits on one phone screen when the class completes (696 of 812 px).
 
+## Changes after review
+
+ATRAUL tested all four scenarios (pass) and pointed out that "complete" was decided by `coverageOf(section) === 100`, which rounds: in a class of 200 or more, 199/200 rounds to 100%, so the app would claim "Class complete" with one student still not Sure. A new `isComplete(section)` helper now checks every student directly and is used in the three places that tested for 100%. Re-checked: all four scenarios still pass; a 200-student test class with 199 Sure no longer shows "Class complete" (it shows "Ahead of pace." and 199/200), and becomes complete only when the last student is Sure; an empty class is never complete; the story 4 check still passes 500/500.
+
 ## How to check it
 
 1. Get the branch and open the app:
