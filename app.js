@@ -340,7 +340,7 @@ function startPractice(minutes) {
     duration: minutes,
     secondsLeft: minutes ? minutes * 60 : null,
     ended: false,
-    startStatuses: minutes ? snapshotStatuses() : null,
+    startStatuses: snapshotStatuses(), // for the recap: who became Sure this round
   };
   state.practice.question = pickQuestion();
   if (minutes) startTimer();
@@ -597,13 +597,14 @@ function practiceScreen() {
     if (answered) {
       // Side by side after answering, so the whole question fits on one screen.
       return `${html}<div class="btn-row">
-          <button class="btn btn-secondary" data-action="go" data-arg="class">End practice</button>
+          <button class="btn btn-secondary" data-action="endPractice">End practice</button>
           <button class="btn btn-primary" data-action="next">${p.justCompleted ? "Keep going" : "Next name"} ${icon("arrow", 18)}</button>
         </div>`;
     }
   }
 
-  html += `<button class="btn btn-secondary" data-action="go" data-arg="class">End practice</button>`;
+  // The recap has its own "Back to roster" button.
+  if (!p.ended) html += `<button class="btn btn-secondary" data-action="endPractice">End practice</button>`;
   return html;
 }
 
@@ -622,8 +623,8 @@ function recapView(section, p, acingEasy) {
 
   let html = `<section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Session recap</p>
-        <h2 class="display">${p.duration} minute${p.duration === 1 ? "" : "s"} well spent.</h2>
+        <p class="eyebrow">Session recap &middot; Section ${state.activeKey}</p>
+        <h2 class="display">${p.duration === null ? "Practice done." : `${p.duration} minute${p.duration === 1 ? "" : "s"} well spent.`}</h2>
         <p class="lede">${newlyConfident} ${newlyConfident === 1 ? "name" : "names"} went from shaky to sure.${stillShaky.length > 0 ? ` ${stillShaky.length} still worth a glance.` : ""}</p>
       </div>
       ${rotunda()}
@@ -658,8 +659,9 @@ function recapView(section, p, acingEasy) {
   }
 
   html += `<div class="stack" style="margin-bottom:10px">
-      <button class="btn btn-primary" data-action="goAgain">Go again ${icon("arrow", 18)}</button>
-      <button class="btn btn-secondary" data-action="untimed">Untimed practice</button>
+      <button class="btn btn-primary" data-action="goAgain">${p.duration === null ? "Keep practicing" : "Go again"} ${icon("arrow", 18)}</button>
+      ${p.duration === null ? "" : '<button class="btn btn-secondary" data-action="untimed">Untimed practice</button>'}
+      <button class="btn btn-secondary" data-action="go" data-arg="class">Back to roster</button>
     </div>`;
   return html;
 }
@@ -885,6 +887,16 @@ const ACTIONS = {
   },
   answer: (i) => answer(Number(i)),
   next: () => nextQuestion(),
+  // Untimed practice with at least one answer ends on a readback; otherwise leave as before.
+  endPractice: () => {
+    const p = state.practice;
+    if (p && !p.ended && p.duration === null && p.score.total > 0) {
+      p.ended = true;
+      render();
+    } else {
+      go("class");
+    }
+  },
   tryHard: () => {
     state.mode = "hard";
     saveProgress(state);
