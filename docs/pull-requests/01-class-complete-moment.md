@@ -7,7 +7,7 @@
 | Author | aidanporges-blip |
 | Reviewer | ATRAUL |
 | Opened | 2026-11-07 |
-| Files changed | `app.js` |
+| Files changed | `app.js` (the app), plus this write-up and its screenshots in `docs/pull-requests/` |
 
 This is a copy of the pull request description, kept in the repo with its screenshots so it stays with the code.
 
@@ -47,7 +47,7 @@ Scenarios 3 and 4 guard the brief's "no false claims of full coverage" rule.
 
 ## What changed
 
-When an answer makes every student in the class Sure, the practice feedback now says "Class complete! All 6 are Sure." and the Next button becomes "Keep going", so Pascal can stop or carry on. The Progress screen shows "Class complete. You know all 6 names." in place of the pace message whenever the class is at 100%, and goes back to the pace message as soon as anyone slips. Only `app.js` changed; nothing new is saved, and the story 4 re-ask behavior is untouched.
+When an answer makes every student in the class Sure, the practice feedback now says "Class complete! All 6 are Sure." and the Next button becomes "Keep going", so Pascal can stop or carry on. The Progress screen shows "Class complete. You know all 6 names." in place of the pace message whenever the class is at 100%, and goes back to the pace message as soon as anyone slips. In the app, only `app.js` changed; nothing new is saved, and the story 4 re-ask behavior is untouched. This write-up and its screenshots are also kept in the repo under `docs/pull-requests/`.
 
 ## What the AI got wrong, and how I caught it
 
