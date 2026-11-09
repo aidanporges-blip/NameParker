@@ -448,14 +448,17 @@ function homeScreen() {
     .map((k) => {
       const s = state.sections[k];
       const cov = coverageOf(s);
+      const done = isComplete(s);
       return `<button class="list-row" data-action="pickSection" data-arg="${k}">
         <span class="letter">${k}</span>
         <span class="grow">
           <span class="row-title">${esc(sectionDescription(s.label))}</span>
-          <span class="row-sub">${s.roster.length} students</span>
-          <span class="bar"><span style="width:${cov}%"></span></span>
+          <span class="row-sub">${s.roster.length} students${done ? ' &middot; <b class="done-word">Complete</b>' : ""}</span>
+          <span class="bar${done ? " done" : ""}"><span style="width:${cov}%"></span></span>
         </span>
-        <span class="pct">${cov}%</span>
+        ${done
+          ? `<span class="pct done" aria-label="Complete">${icon("check", 16, 3)}</span>`
+          : `<span class="pct">${cov}%</span>`}
         ${icon("chevron", 18, 2.2, "chev")}
       </button>`;
     })
@@ -589,6 +592,17 @@ function practiceScreen() {
 
   if (p.ended) {
     html += recapView(section, p, acingEasy);
+  } else if (p.justCompleted) {
+    // The answer that finished the class: one big card in place of the question, so it can't be missed.
+    return `${html}<div class="card done-card" role="status">
+        <span class="done-ico">${icon("check", 30, 3)}</span>
+        <h2 class="done-title">Class complete!</h2>
+        <p class="done-sub">You know all ${section.roster.length} names in ${esc(sectionDescription(section.label))}.</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" data-action="endPractice">End practice</button>
+        <button class="btn btn-primary" data-action="next">Keep going ${icon("arrow", 18)}</button>
+      </div>`;
   } else {
     if (acingEasy && p.duration === null) {
       html += hardModeNudge(`${p.score.correct}/${p.score.total} and counting!`);
@@ -613,9 +627,7 @@ function practiceScreen() {
       html += `<div class="feedback ${answeredCorrectly ? "good" : "bad"}" role="status">
           <span class="fb-ico">${icon(answeredCorrectly ? "check" : "x", 18, 2.8)}</span>
           <div>
-            <p class="fb-title">${p.justCompleted
-              ? `Class complete! All ${section.roster.length} are Sure.`
-              : answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : `Missed. That's ${esc(q.fullName)}.`}</p>
+            <p class="fb-title">${answeredCorrectly ? `Nice, that's ${esc(q.first)}.` : `Missed. That's ${esc(q.fullName)}.`}</p>
           </div>
         </div>`;
     }
@@ -632,7 +644,7 @@ function practiceScreen() {
       // Side by side after answering, so the whole question fits on one screen.
       return `${html}<div class="btn-row">
           <button class="btn btn-secondary" data-action="endPractice">End practice</button>
-          <button class="btn btn-primary" data-action="next">${p.justCompleted ? "Keep going" : "Next name"} ${icon("arrow", 18)}</button>
+          <button class="btn btn-primary" data-action="next">Next name ${icon("arrow", 18)}</button>
         </div>`;
     }
   }
