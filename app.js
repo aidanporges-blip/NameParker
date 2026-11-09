@@ -2,6 +2,7 @@
    Plain JavaScript, no frameworks. Data lives in data.js; saving lives in storage.js. */
 
 const TOTAL_WEEKS = 15;
+const DURATIONS = [1, 5, 10]; // timed round lengths, in minutes
 
 /* ---------------- State ---------------- */
 
@@ -18,6 +19,7 @@ const state = {
   practice: null, // the current practice session (see startPractice)
   showAllNeeds: false, // Progress screen: show every name that needs practice, not just the top three
   classUi: { syncing: false, uploaded: false },
+  fit: { minutes: "", note: "", ok: true }, // Story 2: "I have N minutes" on the practice setup screen (not saved)
   addClass: { picked: CANVAS_COURSES[0].id, query: "" },
 };
 
@@ -106,6 +108,31 @@ function formatTime(totalSeconds) {
 
 function activeSection() {
   return state.sections[state.activeKey];
+}
+
+// Story 2: the longest timed round that ends before class, and a sentence saying why.
+// Returns duration: a number of minutes, null for untimed, or undefined to leave the timer alone.
+function fitDuration(text) {
+  const raw = String(text).trim();
+  if (!/^\d+(\.\d+)?$/.test(raw)) {
+    return { duration: undefined, ok: false, note: "Type your minutes as a number, like 4." };
+  }
+  const minutes = Number(raw);
+  const fits = DURATIONS.filter((d) => d <= minutes);
+  if (fits.length === 0) {
+    return {
+      duration: null,
+      ok: false,
+      note: `Even a ${DURATIONS[0]}-minute round would run past the bell. Switched to Untimed, so you can stop anytime.`,
+    };
+  }
+  const pick = fits[fits.length - 1];
+  const tooLong = DURATIONS.find((d) => d > minutes);
+  return {
+    duration: pick,
+    ok: true,
+    note: `${pick} min fits your ${minutes} min.${tooLong ? ` ${tooLong} min would run past the bell.` : ""}`,
+  };
 }
 
 function isBehindPace() {
@@ -497,7 +524,7 @@ function sectionMenuScreen() {
   const missedCount = section.roster.filter(wasMissed).length;
   const opt = (on, action, arg, label) =>
     `<button class="opt${on ? " on" : ""}" data-action="${action}" data-arg="${arg}" aria-pressed="${on}">${label}</button>`;
-  const timers = [null, 1, 5, 10]
+  const timers = [null, ...DURATIONS]
     .map((d) => opt(state.duration === d, "setDuration", d === null ? "none" : d, d === null ? "Untimed" : `${d} min`))
     .join("");
 
@@ -523,6 +550,12 @@ function sectionMenuScreen() {
       <button class="opt tall${state.mode === "hard" ? " on" : ""}" data-action="setMode" data-arg="hard" aria-pressed="${state.mode === "hard"}">Hard Mode<small>Pick the pronunciation</small></button>
     </div>
     <p class="group-label">Timer</p>
+    <form class="fit" data-form="fit">
+      <label class="fit-label" for="fit-minutes">Minutes until class</label>
+      <input id="fit-minutes" inputmode="decimal" autocomplete="off" placeholder="e.g. 4" value="${esc(state.fit.minutes)}">
+      <button class="chip-btn" type="submit">Fit my time</button>
+    </form>
+    ${state.fit.note ? `<p class="fit-note${state.fit.ok ? "" : " warn"}" role="status">${esc(state.fit.note)}</p>` : ""}
     <div class="seg">${timers}</div>
     <button class="btn btn-primary btn-lg" data-action="launch">Start practice ${icon("arrow", 20)}</button>`;
 }
@@ -816,6 +849,7 @@ function go(tab) {
   if (state.tab === "practice" && tab !== "practice") stopTimer();
   if (tab === "class") state.classUi = { syncing: false, uploaded: false };
   if (tab === "addClass") state.addClass = { picked: firstOpenCourse(), query: "" };
+  if (tab === "sectionMenu" && state.tab !== "sectionMenu") state.fit = { minutes: "", note: "", ok: true };
   if (tab === "practice") startPractice(state.duration);
   if (tab !== state.tab) state.showAllNeeds = false;
   state.tab = tab;
@@ -873,6 +907,9 @@ const ACTIONS = {
   },
   setDuration: (v) => {
     state.duration = v === "none" ? null : Number(v);
+    // A hand-picked timer replaces "Fit my time": clear the minutes too, or the old number
+    // (say 0.5) stays on screen next to a 5-minute round with no warning.
+    state.fit = { minutes: "", note: "", ok: true };
     saveProgress(state);
     render();
   },
@@ -951,6 +988,20 @@ document.addEventListener("click", (e) => {
   if (!el || el.disabled) return;
   const handler = ACTIONS[el.dataset.action];
   if (handler) handler(el.dataset.arg);
+});
+
+// Story 2: "Fit my time" (button or Enter) picks the timer for the minutes typed.
+document.addEventListener("submit", (e) => {
+  if (e.target.dataset.form !== "fit") return;
+  e.preventDefault();
+  const typed = document.getElementById("fit-minutes").value;
+  const result = fitDuration(typed);
+  state.fit = { minutes: typed, note: result.note, ok: result.ok };
+  if (result.duration !== undefined) {
+    state.duration = result.duration;
+    saveProgress(state);
+  }
+  render();
 });
 
 document.addEventListener("input", (e) => {
