@@ -69,6 +69,19 @@ function writeLog(log) {
   }
 }
 
+// True if this browser lets the app save the log. Checked up front so the moderator can see
+// "logging is off" before a session starts, not at Export time when the session is already lost.
+function canLog() {
+  try {
+    const probe = "guess-hoo-log-probe";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Adds one event, stamped with the current time. `fields` holds the event's own details.
 function logEvent(event, fields) {
   const log = readLog();
