@@ -113,8 +113,9 @@ function activeSection() {
 // Story 2: the longest timed round that ends before class, and a sentence saying why.
 // Returns duration: a number of minutes, null for untimed, or undefined to leave the timer alone.
 function fitDuration(text) {
-  const raw = String(text).trim();
-  if (!/^\d+(\.\d+)?$/.test(raw)) {
+  // Accept "4", "4.5", ".5", "4." and a comma decimal ("0,5"), which some phone keyboards show.
+  const raw = String(text).trim().replace(",", ".");
+  if (!/^(\d+\.?\d*|\.\d+)$/.test(raw)) {
     return { duration: undefined, ok: false, note: "Type your minutes as a number, like 4." };
   }
   const minutes = Number(raw);
@@ -914,6 +915,13 @@ const ACTIONS = {
     render();
   },
   launch: () => {
+    // Minutes typed but never fitted still count: fit them now, so a 5-minute round
+    // can't start when Pascal said he has 4. A non-number stops here with the message.
+    const box = document.getElementById("fit-minutes");
+    if (box && box.value.trim() !== "" && applyFit(box.value).duration === undefined) {
+      render();
+      return;
+    }
     if (state.namesFilter === "missed") {
       const ids = activeSection().roster.filter(wasMissed).map((s) => s.id);
       state.focusQueue = ids.length > 0 ? ids : null;
@@ -990,21 +998,28 @@ document.addEventListener("click", (e) => {
   if (handler) handler(el.dataset.arg);
 });
 
-// Story 2: "Fit my time" (button or Enter) picks the timer for the minutes typed.
-document.addEventListener("submit", (e) => {
-  if (e.target.dataset.form !== "fit") return;
-  e.preventDefault();
-  const typed = document.getElementById("fit-minutes").value;
+// Story 2: set the timer for the minutes typed, and the message saying why.
+function applyFit(typed) {
   const result = fitDuration(typed);
   state.fit = { minutes: typed, note: result.note, ok: result.ok };
   if (result.duration !== undefined) {
     state.duration = result.duration;
     saveProgress(state);
   }
+  return result;
+}
+
+// "Fit my time" (button or Enter).
+document.addEventListener("submit", (e) => {
+  if (e.target.dataset.form !== "fit") return;
+  e.preventDefault();
+  applyFit(document.getElementById("fit-minutes").value);
   render();
 });
 
 document.addEventListener("input", (e) => {
+  // Keep what's typed, so tapping Easy/Hard Mode (which redraws the screen) doesn't wipe it.
+  if (e.target.id === "fit-minutes") state.fit.minutes = e.target.value;
   if (e.target.id === "course-search") {
     state.addClass.query = e.target.value;
     document.getElementById("course-list").innerHTML = courseList();
