@@ -30,7 +30,7 @@ Before this change, the only record of a usability session was whatever the mode
 
 ## What changed
 
-The app now keeps a separate, timestamped log of each round start, time to first face, every answer, and each round end. The Moderator controls panel has an **Export log (N events)** button that downloads it as a CSV (`guess-hoo-log-YYYY-MM-DD-HHMM.csv`), and a **Clear log** button that asks "Export first?" if anything is unexported. The log has its own storage slot, separate from progress, so Reset all progress leaves it alone. Files changed: `storage.js` (log functions), `app.js` (one log call at each point, plus the two buttons), and `style.css` (panel styling).
+The app now keeps a separate, timestamped log of each round start, time to first face, every answer, and each round end. The Moderator controls panel has an **Export log (N events)** button that downloads it as a CSV (`guess-hoo-log-YYYY-MM-DD-HHMMZ.csv`, in UTC like the timestamps inside it), and a **Clear log** button that asks "Export first?" if anything is unexported. The log has its own storage slot, separate from progress, so Reset all progress leaves it alone. Files changed: `storage.js` (log functions), `app.js` (one log call at each point, plus the two buttons), and `style.css` (panel styling).
 
 ## What the AI got wrong, and how I caught it
 
