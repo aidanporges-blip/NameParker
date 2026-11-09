@@ -31,9 +31,15 @@ This is backlog story 2 ("Choose a duration") in `Product Brief/stories.md`. Bef
 - Then the app asks him to type the minutes as a number
 - And his 5-minute round is left as it was
 
+**5. Starting without tapping Fit my time (goes wrong; added after review)**
+- Given Pascal has chosen a 5-minute round
+- And he types 4 in Minutes until class
+- When he starts practice without tapping Fit my time
+- Then a 1-minute round starts, not a 5-minute one
+
 ## What changed
 
-The practice setup screen has a new "Minutes until class" box with a **Fit my time** button (Enter works too). The app picks the longest timer that ends in time, shows one line saying why, and falls back to Untimed when even 1 minute won't fit. Choosing a timer by hand clears the box and the message. Only `app.js` and `style.css` changed; nothing new is saved.
+The practice setup screen has a new "Minutes until class" box with a **Fit my time** button (Enter, or tapping Start practice, works too). The app picks the longest timer that ends in time, shows one line saying why, and falls back to Untimed when even 1 minute won't fit. Choosing a timer by hand clears the box and the message. Only `app.js` and `style.css` changed; nothing new is saved.
 
 ## What the AI got wrong, and how I caught it
 
@@ -62,6 +68,21 @@ All four were run by clicking and typing in the app at phone size (375 × 812) i
 
 Also checked: no errors in the browser console. Not checked: the voice part of the brief ("says he has four minutes"). This version uses a typed number, not speech.
 
+## Changes after review
+
+Ashby approved, with one question, one risk and two smaller notes:
+
+1. **Risk: typing minutes and tapping Start practice ignored them (code fix, new Scenario 5).** With 5 min selected, typing 4 and starting straight away gave a 5-minute round. Start practice now fits whatever is in the box first. If the box holds something that isn't a number, it shows the "Type your minutes as a number" message and doesn't start. An empty box keeps the hand-picked timer.
+2. **Question: should "fits" leave a buffer before the bell? (no change).** It's intentional that a round may end exactly at the bell. That matches the brief's own example ("four minutes" gives 1 min, because 5 would run past the bell). With fix 1, the clock starts as soon as Pascal taps Start, so time on the setup screen is the only slack, and that is now one tap.
+3. **`.5`, `4.` and `0,5` were rejected (code fix).** They are now accepted. A comma is read as a decimal point, since some phone keyboards show a comma.
+4. **Typed minutes were wiped by tapping Easy or Hard Mode (code fix).** What's typed is now kept as you type, so a redraw doesn't empty the box.
+
+Re-checked at 375 × 812 after the changes: Scenarios 1 to 4 give the same results as before, and Scenario 5 passes. `.5` and `0,5` switch to Untimed, `4.` picks 1 min, and `5` picks 5 min. "four" followed by Start practice stays on the setup screen with the message. Typing 4, then tapping Hard Mode and back to Easy, keeps the 4. No console errors.
+
+| 5. Typed 4, 5 min still selected | 5. Start practice → 1:00 |
+|---|---|
+| <img src="04-fit-my-time/s5-typed-not-fitted.jpg" alt="4 typed, Fit my time not tapped, 5 min selected" width="160"> | <img src="04-fit-my-time/s5-round-starts-1-00.jpg" alt="The round starts at 1:00 left" width="160"> |
+
 ## How to check it
 
 1. Get the branch and open the app:
@@ -75,3 +96,4 @@ Also checked: no errors in the browser console. Not checked: the voice part of t
 4. **Scenario 2:** type `12` and tap **Fit my time**. You should see **10 min** selected and no warning.
 5. **Scenario 3:** tap **5 min**, type `0.5`, and press Enter. You should see **Untimed** selected and the red warning. Then tap **5 min**: the box should go back to empty ("e.g. 4").
 6. **Scenario 4:** with **5 min** selected, type `four` and tap **Fit my time**. You should see "Type your minutes as a number, like 4." and **5 min** should still be selected.
+7. **Scenario 5:** tap **5 min**, type `4`, and tap **Start practice** without tapping Fit my time. The timer should show 1:00.
