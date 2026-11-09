@@ -29,6 +29,7 @@ if (savedProgress) {
 }
 
 let timerId = null;
+let classTappedAt = null; // when the class was tapped on the home screen, for the first_face event
 
 /* ---------------- Helpers ---------------- */
 
@@ -328,6 +329,47 @@ function snapshotStatuses() {
   return snap;
 }
 
+/* ---------------- Session log ---------------- */
+
+// The next round number: one more than the highest round already in the log.
+function nextRoundNumber() {
+  return loadEvents().reduce((max, e) => Math.max(max, e.round || 0), 0) + 1;
+}
+
+// Logs the end of the current round, once. reason: "timer" or "ended early".
+function logRoundEnd(reason) {
+  const p = state.practice;
+  if (!p || p.endLogged) return;
+  p.endLogged = true;
+  logEvent("round_end", {
+    round: p.round,
+    section: state.activeKey,
+    reason,
+    score: `${p.score.correct}/${p.score.total}`,
+    seconds_played: Math.round((Date.now() - p.startedAt) / 1000),
+  });
+}
+
+function downloadLog() {
+  const csv = exportEvents();
+  if (!csv) {
+    state.modMessage = "Nothing logged yet.";
+    render();
+    return;
+  }
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const name = `guess-hoo-log-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  state.modMessage = `Exported ${name}`;
+  render();
+}
+
 function startPractice(minutes) {
   stopTimer();
   // Build the session first, so pickQuestion() reads this round's re-ask list, not the last round's.
@@ -341,8 +383,25 @@ function startPractice(minutes) {
     secondsLeft: minutes ? minutes * 60 : null,
     ended: false,
     startStatuses: snapshotStatuses(), // for the recap: who became Sure this round
+    round: nextRoundNumber(),
+    startedAt: Date.now(),
+    shownAt: null, // when the current question appeared, for response time
+    endLogged: false,
   };
-  state.practice.question = pickQuestion();
+  const p = state.practice;
+  logEvent("round_start", {
+    round: p.round,
+    section: state.activeKey,
+    mode: state.mode,
+    duration: minutes ? `${minutes} min` : "untimed",
+    names: state.focusQueue && state.focusQueue.length > 0 ? "missed only" : "all",
+  });
+  p.question = pickQuestion();
+  p.shownAt = Date.now();
+  if (classTappedAt !== null) {
+    logEvent("first_face", { round: p.round, section: state.activeKey, ms: p.shownAt - classTappedAt });
+    classTappedAt = null;
+  }
   if (minutes) startTimer();
 }
 
@@ -356,6 +415,7 @@ function startTimer() {
       p.secondsLeft = 0;
       p.ended = true;
       stopTimer();
+      logRoundEnd("timer");
       render();
     } else {
       updateTimerDisplay();
@@ -399,6 +459,15 @@ function answer(index) {
   }
   // This answer made every student in the class Sure.
   p.justCompleted = !wasComplete && isComplete(activeSection());
+  logEvent("answer", {
+    round: p.round,
+    section: state.activeKey,
+    student_id: s.id,
+    student_name: s.fullName,
+    result: correct ? "right" : "wrong",
+    new_status: s.status,
+    ms: Date.now() - p.shownAt,
+  });
   console.log("[answer]", s.fullName, correct ? "RIGHT" : "MISS", "status:", s.status, "misses:", s.missedCount);
   saveProgress(state);
   render();
@@ -409,6 +478,7 @@ function nextQuestion() {
   p.picked = null;
   p.justCompleted = false;
   p.question = pickQuestion();
+  p.shownAt = Date.now();
   render();
 }
 
@@ -775,6 +845,15 @@ function moderatorPanel() {
             <input id="week-slider" type="range" min="1" max="${TOTAL_WEEKS}" value="${state.week}" step="1">
           </label>
           <button class="mod-reset" data-action="reset">Reset all progress</button>
+          <p class="mod-label">Session log</p>
+          <button class="mod-reset mod-log" data-action="exportLog">Export log (${loadEvents().length} events)</button>
+          ${state.confirmClear
+            ? `<p class="mod-note">Not exported since the last event. Export first?</p>
+               <button class="mod-reset" data-action="exportThenClear">Export, then clear</button>
+               <button class="mod-reset" data-action="clearLog" data-arg="anyway">Clear without exporting</button>
+               <button class="mod-reset" data-action="cancelClear">Cancel</button>`
+            : '<button class="mod-reset" data-action="clearLog">Clear log</button>'}
+          ${state.modMessage ? `<p class="mod-note">${esc(state.modMessage)}</p>` : ""}
         </div>`
       : ""}
   </div>`;
@@ -842,6 +921,7 @@ function resetAll() {
 const ACTIONS = {
   go: (arg) => go(arg),
   pickSection: (key) => {
+    classTappedAt = Date.now();
     state.activeKey = key;
     saveProgress(state);
     go("class");
@@ -892,8 +972,10 @@ const ACTIONS = {
     const p = state.practice;
     if (p && !p.ended && p.duration === null && p.score.total > 0) {
       p.ended = true;
+      logRoundEnd("ended early");
       render();
     } else {
+      if (p && !p.ended) logRoundEnd("ended early");
       go("class");
     }
   },
@@ -941,6 +1023,33 @@ const ACTIONS = {
   },
   toggleMod: () => {
     state.modOpen = !state.modOpen;
+    state.modMessage = null;
+    state.confirmClear = false;
+    render();
+  },
+  exportLog: () => downloadLog(),
+  clearLog: (arg) => {
+    if (arg !== "anyway" && hasUnexportedEvents()) {
+      state.confirmClear = true;
+      state.modMessage = null;
+    } else {
+      clearEvents();
+      state.confirmClear = false;
+      state.modMessage = "Log cleared.";
+    }
+    render();
+  },
+  exportThenClear: () => {
+    downloadLog();
+    if (!hasUnexportedEvents()) {
+      clearEvents();
+      state.modMessage = "Exported and cleared.";
+    }
+    state.confirmClear = false;
+    render();
+  },
+  cancelClear: () => {
+    state.confirmClear = false;
     render();
   },
   reset: () => resetAll(),
