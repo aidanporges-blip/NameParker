@@ -235,4 +235,6 @@ p,h1,h2,h3{margin:0}
 .mod-body .mod-reset+.mod-reset,.mod-body .mod-note+.mod-reset{margin-top:6px}
 .mod-label{margin:12px 0 6px;font-weight:700;color:var(--navy);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .mod-note{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.mod-note.warn{margin:0 0 8px;color:var(--red-deep);line-height:1.4}
+.mod-toggle.warn{color:var(--red-deep);border-color:#F4CDD0;background:var(--red-soft)}
 .mod-log{padding:9px 4px;white-space:nowrap;font-size:12px}
