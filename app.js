@@ -507,6 +507,8 @@ function classScreen() {
         View progress
       </button>
     </div>
+    <div class="section-head"><h2 class="h2">Class roster</h2><span class="meta">${section.roster.length} students</span></div>
+    <div class="card list">${rows}</div>
     <div class="card canvas-card">
       <span class="icon-tile navy">${icon("cloud", 22)}</span>
       <span class="grow">
@@ -515,8 +517,6 @@ function classScreen() {
       </span>
       <button class="chip-btn" data-action="resync"${ui.syncing ? " disabled" : ""}>${ui.syncing ? "…" : `${icon("refresh", 14, 2.6)} Re-sync`}</button>
     </div>
-    <div class="section-head"><h2 class="h2">Class roster</h2><span class="meta">${section.roster.length} students</span></div>
-    <div class="card list">${rows}</div>
     ${ui.uploaded
       ? '<p class="link ok">Roster file uploaded</p>'
       : '<button class="link" data-action="upload">Roster missing someone? Upload a file instead</button>'}`;
