@@ -357,9 +357,10 @@ function downloadLog() {
     render();
     return;
   }
+  // UTC, like the timestamps inside the file, so the name and the rows match (the Z marks UTC).
   const d = new Date();
   const pad = (n) => String(n).padStart(2, "0");
-  const name = `guess-hoo-log-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  const name = `guess-hoo-log-${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}Z.csv`;
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
   link.download = name;
@@ -837,8 +838,11 @@ function addClassScreen() {
 }
 
 function moderatorPanel() {
+  // Shown on the collapsed toggle too, so a moderator sees it before the session, without opening the panel.
+  // ("Moderator · logging off" is the longest label that fits on one line in the 180px phone panel.)
+  const loggingOff = !canLog();
   return `<div class="mod">
-    <button class="mod-toggle" data-action="toggleMod" aria-expanded="${state.modOpen}">${state.modOpen ? "Hide moderator controls ▴" : "Moderator controls ▾"}</button>
+    <button class="mod-toggle${loggingOff ? " warn" : ""}" data-action="toggleMod" aria-expanded="${state.modOpen}">${state.modOpen ? "Hide moderator controls ▴" : loggingOff ? "Moderator · logging off ▾" : "Moderator controls ▾"}</button>
     ${state.modOpen
       ? `<div class="mod-body">
           <label>Current week: <b id="week-num" style="color:var(--ink)">${state.week}</b> of ${TOTAL_WEEKS}
@@ -846,6 +850,9 @@ function moderatorPanel() {
           </label>
           <button class="mod-reset" data-action="reset">Reset all progress</button>
           <p class="mod-label">Session log</p>
+          ${loggingOff
+            ? '<p class="mod-note warn" role="status">Logging is off in this browser, so nothing from this session will be saved. Open the app in a normal (not private) window, or allow this site to store data.</p>'
+            : ""}
           <button class="mod-reset mod-log" data-action="exportLog">Export log (${loadEvents().length} events)</button>
           ${state.confirmClear
             ? `<p class="mod-note">Not exported since the last event. Export first?</p>
