@@ -1,0 +1,12 @@
+{
+  "name": "nameparker",
+  "private": true,
+  "description": "Guess hoo: tests only. The app itself is plain HTML, CSS and JavaScript with no build step.",
+  "scripts": {
+    "test": "node --test \"tests/unit/*.test.js\" \"tests/integration/*.test.js\" \"tests/*.test.js\"",
+    "test:system": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.48.2"
+  }
+}
