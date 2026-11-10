@@ -85,7 +85,7 @@ The class screen has a new **Random cold call** button under View progress. It o
 
 ## Scenario results
 
-Scenarios 1, 4 and 5 were run by hand in the app at phone size (375 × 812), starting from Moderator controls → Reset all progress. The rest are checked by `tests/coldcall.test.js` (plus the wheel checks below). The test files were run in a browser with their code unchanged, because Node isn't installed on this computer; they should give the same results with `node tests/coldcall.test.js`.
+Scenarios 1, 4 and 5 were run by hand in the app at phone size (375 × 812), starting from Moderator controls → Reset all progress. The rest are checked by `tests/coldcall.test.js` (plus the wheel checks below). The test files were first run in a browser with their code unchanged, because Node wasn't installed yet. After installing Node and merging the latest `main` (which added the automated checks from PR #10), `npm test` passed 10 of 10 in Node, including `tests/coldcall.test.js` and `tests/story4.test.js`, and `npm run test:system` passed. Both required GitHub checks ("Unit and integration tests" and "System test (browser)") passed on this pull request.
 
 | # | Result | How it was checked | What happened |
 |---|---|---|---|
@@ -119,6 +119,6 @@ Wheel checks (phone size): the arrow landed on the picked student every time, me
 7. **Scenario 8:** with No replacement and nobody called yet, press + until it stops at 12 and read the note.
 8. **Tests:**
    ```bash
-   node tests/coldcall.test.js
-   node tests/story4.test.js
+   npm test
+   npm run test:system
    ```
