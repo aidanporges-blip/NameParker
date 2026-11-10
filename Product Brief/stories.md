@@ -136,6 +136,79 @@ Scenario: Full coverage
   Then the app shows 6 of 6, or 100% coverage, as the done state
 
 
+IN CLASS: RANDOM COLD CALL
+--------------------------
+
+As Pascal, during class, I want to generate a random list of students from the
+section I'm teaching, so I can cold call fairly and use their names without
+picking the same few people every time.
+
+Where it lives: on the Today screen, after Pascal selects a class, a
+"Random cold call" button sits below "View progress". It opens a new page where
+he chooses no replacement or replacement, picks how many students, and taps
+Generate.
+
+Analytical question: Do professors use the list in class, and does it spread
+cold calls across the whole roster?
+OEC ratio: Professors who generate a cold-call list in a week / active professors
+
+Scenario: Open the cold call page from the selected class
+  Given Pascal has selected Section E on the Today screen
+  When he taps "Random cold call" below "View progress"
+  Then a cold call page opens for Section E
+  And he can choose no replacement or replacement, and the number of students
+
+Scenario: No replacement
+  Given Section E has 12 students
+  And Pascal chooses no replacement and 5 students
+  When he taps Generate
+  Then he sees a list of 5 different students from Section E in random order
+
+Scenario: Replacement
+  Given Section E has 12 students
+  And Pascal chooses replacement and 5 students
+  When he taps Generate
+  Then he sees a list of 5 names, each picked at random from all 12 students
+  And the same student can appear more than once
+
+Scenario: Only the selected class
+  Given Pascal has more than one class
+  And he opened the cold call page from Section E
+  When he taps Generate
+  Then every name on the list is a Section E student
+
+Scenario: Generate again
+  Given Pascal chose no replacement and has generated a list that included Jordan Smith
+  When he taps Generate again
+  Then the new list has only Section E students who haven't been called yet
+  And Jordan Smith is not on it
+
+Scenario: Each class keeps its own list
+  Given Jordan Smith was cold called in Section E with no replacement
+  When Pascal opens the cold call page for another class
+  Then that class's students can all still be called
+  And starting over in one class does not reset the other
+
+Scenario: Everyone has been called (goes wrong)
+  Given all 12 students in Section E have been called with no replacement
+  When Pascal tries to generate another list
+  Then the app says everyone in this class has been called
+  And he can start over to put all 12 back
+
+Scenario: Asking for more students than are left (goes wrong)
+  Given Section E has 12 students
+  And Pascal chooses no replacement
+  When he tries to ask for 15 students
+  Then the app does not let the number go above the students left to call (12 at the start)
+  And it says why: with no replacement, each student can appear only once
+
+Scenario: Cold calling does not change practice progress (goes wrong)
+  Given Kwabena Mensah is Shaky in Section E
+  When Pascal generates a cold call list that includes Kwabena
+  Then Kwabena is still Shaky
+  And Section E's coverage and needs-practice list are unchanged
+
+
 PRACTICE COACH (agentic extension)
 ----------------------------------
 
