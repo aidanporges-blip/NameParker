@@ -12,6 +12,8 @@ test("practicing Research Seminar to 6 of 6 shows Class complete", async ({ page
 
   await page.getByRole("button", { name: /Moderator controls/ }).click();
   await page.getByRole("button", { name: "Reset all progress" }).click();
+  // Close the panel again, as a moderator would; left open, it covers buttons on a phone-sized screen.
+  await page.getByRole("button", { name: /Hide moderator controls/ }).click();
 
   await page.getByRole("button", { name: /Research Seminar/ }).click();
   await page.getByRole("button", { name: /Practice these names/ }).click();
