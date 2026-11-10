@@ -3,13 +3,15 @@
 
 const TOTAL_WEEKS = 15;
 const DURATIONS = [1, 5, 10]; // timed round lengths, in minutes
+const COLD_CALL_MAX = 30; // most names in one cold call list when names can repeat
+const SPIN_MS = 1600; // how long the cold call wheel spins for each name
 
 /* ---------------- State ---------------- */
 
 const state = {
   sections: seedProgress(initialSections()),
   activeKey: "E",
-  tab: "home", // home | class | sectionMenu | practice | progress | addClass
+  tab: "home", // home | class | sectionMenu | practice | progress | addClass | coldCall
   mode: "easy", // easy | hard
   duration: null, // null (untimed) or minutes
   namesFilter: "all", // all | missed
@@ -21,6 +23,8 @@ const state = {
   classUi: { syncing: false, uploaded: false },
   fit: { minutes: "", note: "", ok: true }, // Story 2: "I have N minutes" on the practice setup screen (not saved)
   addClass: { picked: CANVAS_COURSES[0].id, query: "" },
+  coldCall: freshColdCall(5), // Random cold call page (not saved)
+  coldCalled: {}, // per class: ids already cold called with no replacement, e.g. { E: [...] } (not saved)
 };
 
 // Pick up where the professor left off, if this browser has saved progress.
@@ -98,6 +102,93 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// A random cold call list from one class. No replacement: shuffle and take the first `count`,
+// so every name is different. Replacement: `count` separate picks from the whole class, so names can repeat.
+function coldCallList(roster, count, withReplacement) {
+  if (roster.length === 0) return [];
+  if (!withReplacement) return shuffle(roster).slice(0, Math.min(count, roster.length));
+  return Array.from({ length: count }, () => roster[Math.floor(Math.random() * roster.length)]);
+}
+
+// Students in this class who haven't been cold called yet (no replacement). Each class keeps its own list.
+function coldCallPool(key) {
+  const called = state.coldCalled[key] || [];
+  return state.sections[key].roster.filter((s) => !called.includes(s.id));
+}
+
+// The most names the cold call page allows for the current mode.
+function coldCallMax(key) {
+  return state.coldCall.replace ? COLD_CALL_MAX : coldCallPool(key).length;
+}
+
+// Cold call page settings when it opens. list: the picked students; revealed: how many the wheel has
+// landed on so far; slices: the students on the wheel during a spin; angle: the wheel's rotation.
+function freshColdCall(count) {
+  return { replace: false, count, list: [], revealed: 0, slices: [], spinning: false, angle: 0, hitId: null };
+}
+
+// The cold call wheel: one slice per student, labeled with initials. The arrow points at the top.
+function wheelSvg(slices, hitId, angle) {
+  const n = slices.length;
+  const fills = [["var(--navy)", "#fff"], ["var(--orange)", "#fff"], ["var(--navy-soft)", "var(--navy)"], ["var(--orange-soft)", "var(--orange-deep)"]];
+  const size = n <= 12 ? 13 : n <= 20 ? 10 : 8;
+  const at = (deg, r) => [100 + r * Math.sin((deg * Math.PI) / 180), 100 - r * Math.cos((deg * Math.PI) / 180)];
+  const parts = slices.map((s, i) => {
+    const [fill, ink] = s.id === hitId ? ["var(--green)", "#fff"] : fills[i % fills.length];
+    const a0 = (i * 360) / n, a1 = ((i + 1) * 360) / n, mid = (a0 + a1) / 2;
+    const [x0, y0] = at(a0, 95), [x1, y1] = at(a1, 95), [tx, ty] = at(mid, 66);
+    const shape = n === 1
+      ? `<circle cx="100" cy="100" r="95" style="fill:${fill}"/>`
+      : `<path d="M100 100 L${x0} ${y0} A95 95 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1} Z" style="fill:${fill}"/>`;
+    return `${shape}<text x="${tx}" y="${ty}" transform="rotate(${mid} ${tx} ${ty})" style="fill:${ink};font-size:${size}px;font-weight:800" text-anchor="middle" dominant-baseline="central">${esc(initials(s.first, s.last))}</text>`;
+  });
+  return `<svg class="cc-wheel" viewBox="0 0 200 200" style="transform:rotate(${angle}deg)" aria-hidden="true">${parts.join("")}<circle cx="100" cy="100" r="14" style="fill:#fff"/></svg>`;
+}
+
+// Spin the wheel to the next picked student, show their name, pop their slice out (no replacement), repeat.
+function coldCallSpin() {
+  const cc = state.coldCall;
+  if (state.tab !== "coldCall" && cc.revealed < cc.list.length) {
+    // Left the page mid-spin: only the names the wheel actually showed count as called.
+    const unshown = cc.list.slice(cc.revealed).map((s) => s.id);
+    if (!cc.replace) {
+      const key = state.activeKey;
+      state.coldCalled[key] = (state.coldCalled[key] || []).filter((id) => !unshown.includes(id));
+    }
+    cc.list = cc.list.slice(0, cc.revealed);
+  }
+  if (state.tab !== "coldCall" || cc.revealed >= cc.list.length) {
+    cc.revealed = cc.list.length;
+    cc.spinning = false;
+    render();
+    return;
+  }
+  const target = cc.list[cc.revealed];
+  const n = cc.slices.length;
+  const center = ((cc.slices.findIndex((s) => s.id === target.id) + 0.5) * 360) / n;
+  const jitter = (Math.random() - 0.5) * (360 / n) * 0.6; // land somewhere inside the slice, not dead center
+  const want = (((360 - center - jitter) % 360) + 360) % 360;
+  const now = ((cc.angle % 360) + 360) % 360;
+  const next = cc.angle + 3 * 360 + ((want - now + 360) % 360); // three full turns, then stop on the student
+  cc.hitId = null;
+  render(); // draw at the old angle, then turn
+  const wheel = document.querySelector(".cc-wheel");
+  requestAnimationFrame(() => {
+    wheel.style.transition = `transform ${SPIN_MS}ms cubic-bezier(.17,.67,.2,1)`;
+    wheel.style.transform = `rotate(${next}deg)`;
+  });
+  cc.angle = next;
+  setTimeout(() => {
+    cc.hitId = target.id;
+    cc.revealed++;
+    render();
+    setTimeout(() => {
+      if (!cc.replace) cc.slices = cc.slices.filter((s) => s.id !== target.id);
+      coldCallSpin();
+    }, 600);
+  }, SPIN_MS);
 }
 
 function formatTime(totalSeconds) {
@@ -270,7 +361,7 @@ function statusBarIcons() {
 }
 
 function tabBar() {
-  const active = state.tab === "class" ? "roster" : state.tab === "progress" ? "progress" : "today";
+  const active = state.tab === "class" || state.tab === "coldCall" ? "roster" : state.tab === "progress" ? "progress" : "today";
   const items = [
     { id: "today", label: "Today", icon: "home", target: "home" },
     { id: "roster", label: "Roster", icon: "users", target: "class" },
@@ -506,6 +597,7 @@ function classScreen() {
         ${isBehindPace() ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--orange)" aria-label="Behind pace"></span>' : ""}
         View progress
       </button>
+      <button class="btn btn-secondary" data-action="go" data-arg="coldCall">Random cold call</button>
     </div>
     <div class="section-head"><h2 class="h2">Class roster</h2><span class="meta">${section.roster.length} students</span></div>
     <div class="card list">${rows}</div>
@@ -562,6 +654,71 @@ function sectionMenuScreen() {
     ${state.fit.note ? `<p class="fit-note${state.fit.ok ? "" : " warn"}" role="status">${esc(state.fit.note)}</p>` : ""}
     <div class="seg">${timers}</div>
     <button class="btn btn-primary btn-lg" data-action="launch">Start practice ${icon("arrow", 20)}</button>`;
+}
+
+function coldCallScreen() {
+  const section = activeSection();
+  const cc = state.coldCall;
+  const total = section.roster.length;
+  const left = coldCallPool(state.activeKey).length;
+  const calledSoFar = total - left;
+  const max = coldCallMax(state.activeKey);
+  const allCalled = !cc.replace && left === 0;
+  const atMax = cc.count >= max;
+  const note = cc.replace
+    ? atMax ? `Up to ${COLD_CALL_MAX} names at a time.` : `Names can repeat (up to ${COLD_CALL_MAX}).`
+    : allCalled
+      ? "Everyone in this class has been called. Start over to put everyone back."
+      : atMax
+        ? left === total
+          ? `With no replacement, each student can appear only once, so the most is ${max}.`
+          : `Only ${left} ${left === 1 ? "student hasn't" : "students haven't"} been called yet. Start over to put everyone back.`
+        : `Each student at most once (up to ${max}).`;
+  const rows = cc.list
+    .slice(0, cc.revealed)
+    .map(
+      (s, i) => `<div class="list-row">
+        <span class="cc-num">${i + 1}</span>${avatar(s, 40)}
+        <p class="row-title grow">${esc(s.fullName)}</p>
+      </div>`
+    )
+    .join("");
+  // During a spin the wheel shows that spin's students; otherwise everyone who can still be picked.
+  const wheelSlices = cc.spinning ? cc.slices : cc.replace ? section.roster : coldCallPool(state.activeKey);
+  const landed = cc.revealed > 0 ? cc.list[cc.revealed - 1] : null;
+  const off = cc.spinning ? " disabled" : "";
+
+  return `${backLink("class", "Back to roster")}
+    ${header(true)}
+    <div class="card summary">
+      <p class="eyebrow">Random cold call &middot; Section ${state.activeKey}</p>
+      <p class="summary-title">${esc(sectionDescription(section.label))}</p>
+      <div class="summary-stats"><span><b>${section.roster.length}</b> students</span></div>
+    </div>
+    <p class="group-label">Picking</p>
+    <div class="seg">
+      <button class="opt tall${cc.replace ? "" : " on"}" data-action="coldCallMode" data-arg="once" aria-pressed="${!cc.replace}"${off}>No replacement<small>Each student once</small></button>
+      <button class="opt tall${cc.replace ? " on" : ""}" data-action="coldCallMode" data-arg="repeat" aria-pressed="${cc.replace}"${off}>Replacement<small>Names can repeat</small></button>
+    </div>
+    <p class="group-label">How many students</p>
+    <div class="stepper">
+      <button class="step" data-action="coldCallStep" data-arg="-1" aria-label="Fewer"${cc.count <= 1 || cc.spinning ? " disabled" : ""}>&minus;</button>
+      <span class="step-val" aria-live="polite">${cc.count}</span>
+      <button class="step" data-action="coldCallStep" data-arg="1" aria-label="More"${atMax || cc.spinning ? " disabled" : ""}>+</button>
+    </div>
+    <p class="cc-note${atMax || allCalled ? " max" : ""}" role="status">${note}</p>
+    ${cc.replace
+      ? ""
+      : `<div class="cc-called">
+          <span>Called so far: <b>${calledSoFar}</b> of ${total}</span>
+          ${calledSoFar > 0 ? `<button class="chip-btn" data-action="coldCallStartOver"${off}>Start over</button>` : ""}
+        </div>`}
+    ${wheelSlices.length > 0
+      ? `<div class="cc-wheel-wrap"><span class="cc-pointer" aria-hidden="true"></span>${wheelSvg(wheelSlices, cc.hitId, cc.angle)}</div>`
+      : ""}
+    <p class="cc-landed" role="status">${landed ? `${icon("check", 18, 3)} ${esc(landed.fullName)}` : ""}</p>
+    <button class="btn btn-primary btn-lg" data-action="coldCallGenerate"${total === 0 || allCalled || cc.spinning ? " disabled" : ""}>${cc.spinning ? "Spinning…" : `Spin ${icon("refresh", 20)}`}</button>
+    ${cc.revealed > 0 ? `<div class="card list cc-list">${rows}</div>` : ""}`;
 }
 
 function practiceScreen() {
@@ -835,6 +992,7 @@ const SCREENS = {
   practice: practiceScreen,
   progress: progressScreen,
   addClass: addClassScreen,
+  coldCall: coldCallScreen,
 };
 
 let lastRenderedTab = null;
@@ -864,6 +1022,9 @@ function go(tab) {
   if (tab === "addClass") state.addClass = { picked: firstOpenCourse(), query: "" };
   if (tab === "sectionMenu" && state.tab !== "sectionMenu") state.fit = { minutes: "", note: "", ok: true };
   if (tab === "practice") startPractice(state.duration);
+  if (tab === "coldCall" && state.tab !== "coldCall") {
+    state.coldCall = freshColdCall(Math.max(1, Math.min(5, coldCallPool(state.activeKey).length)));
+  }
   if (tab !== state.tab) state.showAllNeeds = false;
   state.tab = tab;
   render();
@@ -881,6 +1042,7 @@ function resetAll() {
     week: 5,
     focusQueue: null,
     practice: null,
+    coldCalled: {},
   });
   saveProgress(state);
   go("home");
@@ -894,6 +1056,49 @@ const ACTIONS = {
     go("class");
   },
   speak: (name) => speak(name),
+  // Random cold call page. None of these touch progress or save anything.
+  coldCallMode: (v) => {
+    const cc = state.coldCall;
+    if (cc.spinning) return;
+    cc.replace = v === "repeat";
+    cc.count = Math.max(1, Math.min(cc.count, coldCallMax(state.activeKey)));
+    render();
+  },
+  coldCallStep: (d) => {
+    const cc = state.coldCall;
+    if (cc.spinning) return;
+    cc.count = Math.max(1, Math.min(cc.count + Number(d), coldCallMax(state.activeKey)));
+    render();
+  },
+  coldCallGenerate: () => {
+    const cc = state.coldCall;
+    const key = state.activeKey;
+    if (cc.spinning) return;
+    if (cc.replace) {
+      cc.slices = activeSection().roster;
+      cc.list = coldCallList(cc.slices, cc.count, true);
+    } else {
+      const pool = coldCallPool(key);
+      if (pool.length === 0) return;
+      cc.slices = pool;
+      cc.list = coldCallList(pool, cc.count, false);
+      state.coldCalled[key] = [...(state.coldCalled[key] || []), ...cc.list.map((s) => s.id)];
+      cc.count = Math.max(1, Math.min(cc.count, coldCallMax(key))); // fewer left now
+    }
+    // The picks are decided above; the wheel only shows them. Skip the spin if motion is turned down.
+    const animate = typeof window.matchMedia === "function" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    cc.revealed = animate ? 0 : cc.list.length;
+    cc.hitId = null;
+    if (!animate) return render();
+    cc.spinning = true;
+    coldCallSpin();
+  },
+  coldCallStartOver: () => {
+    if (state.coldCall.spinning) return;
+    state.coldCalled[state.activeKey] = []; // this class only
+    Object.assign(state.coldCall, { list: [], revealed: 0, slices: [], hitId: null });
+    render();
+  },
   resync: () => {
     state.classUi.syncing = true;
     render();
