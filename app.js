@@ -193,7 +193,7 @@ function wasMissed(student) {
 // Every student is Sure. Checks the students directly, because coverageOf() rounds
 // (199 of 200 would show as 100%).
 function isComplete(section) {
-  return !!section && section.roster.length > 0 && section.roster.every((s) => !needsPractice(s));
+  return coverageOf(section) === 100;
 }
 
 function pill(cls, iconName, text) {
