@@ -1,0 +1,31 @@
+# Runs the tests on GitHub's machines every time someone pushes or opens/updates a pull request.
+# No keys or secrets: the tests only need the code in this repository.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # get this repository's code
+      - uses: actions/setup-node@v4 # install Node, which runs the tests
+        with:
+          node-version: 22
+      - run: npm test # the same command you run locally; uses Node's built-in test runner, nothing to install
+
+  system:
+    name: System test (browser)
+    needs: unit # only run the slower browser test once the fast tests pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install # installs Playwright (the only package, a test tool)
+      - run: npx playwright install --with-deps chromium # downloads the browser Playwright drives
+      - run: npm run test:system # starts the local test server and runs tests/system
